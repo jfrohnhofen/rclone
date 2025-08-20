@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand/v2"
+	"os"
 	"path"
 	"slices"
 	"strconv"
@@ -490,12 +491,22 @@ func (f *Filter) IncludeDirectory(ctx context.Context, fs fs.Fs) func(string) (b
 func (f *Filter) DirContainsExcludeFile(ctx context.Context, fremote fs.Fs, remote string) (bool, error) {
 	if len(f.Opt.ExcludeFile) > 0 {
 		for _, excludeFile := range f.Opt.ExcludeFile {
-			exists, err := fs.FileExists(ctx, fremote, path.Join(remote, excludeFile))
-			if err != nil {
-				return false, err
-			}
-			if exists {
-				return true, nil
+			if strings.HasSuffix(excludeFile, string(os.PathSeparator)) {
+				exists, err := fs.DirExists(ctx, fremote, path.Join(remote, excludeFile))
+				if err != nil {
+					return false, err
+				}
+				if exists {
+					return true, nil
+				}
+			} else {
+				exists, err := fs.FileExists(ctx, fremote, path.Join(remote, excludeFile))
+				if err != nil {
+					return false, err
+				}
+				if exists {
+					return true, nil
+				}
 			}
 		}
 	}

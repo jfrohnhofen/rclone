@@ -74,6 +74,22 @@ func FileExists(ctx context.Context, fs Fs, remote string) (bool, error) {
 	return true, nil
 }
 
+// DirExists returns true if a dir remote exists.
+// If remote is a file, DirExists returns false.
+func DirExists(ctx context.Context, fs Fs, remote string) (bool, error) {
+	_, err := fs.NewObject(ctx, remote)
+	if err != nil {
+		if err == ErrorObjectNotFound || err == ErrorPermissionDenied {
+			return false, nil
+		}
+		if err == ErrorIsDir {
+			return true, nil
+		}
+		return false, err
+	}
+	return false, nil
+}
+
 // GetModifyWindow calculates the maximum modify window between the given Fses
 // and the Config.ModifyWindow parameter.
 func GetModifyWindow(ctx context.Context, fss ...Info) time.Duration {
