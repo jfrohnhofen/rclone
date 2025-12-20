@@ -129,6 +129,18 @@ var (
 		"application/x-link-html":    ".link.html",
 		"application/x-link-url":     ".url",
 		"application/x-link-webloc":  ".webloc",
+		"application/x-link-gdoc":    ".gdoc",
+		"application/x-link-gsheet":  ".gsheet",
+		"application/x-link-gslides": ".gslides",
+		"application/x-link-gform":   ".gform",
+		"application/x-link-gscript": ".gscript",
+	}
+	_linkMimeTypeFilter = map[string]string{
+		"application/x-link-gdoc":    "application/vnd.google-apps.document",
+		"application/x-link-gsheet":  "application/vnd.google-apps.spreadsheet",
+		"application/x-link-gslides": "application/vnd.google-apps.presentation",
+		"application/x-link-gform":   "application/vnd.google-apps.form",
+		"application/x-link-gscript": "application/vnd.google-apps.script",
 	}
 	_mimeTypeCustomTransform = map[string]string{
 		"application/vnd.google-apps.script+json": "application/json",
@@ -1212,8 +1224,9 @@ func isInternalMimeType(mimeType string) bool {
 	return strings.HasPrefix(mimeType, "application/vnd.google-apps.")
 }
 
-func isLinkMimeType(mimeType string) bool {
-	return strings.HasPrefix(mimeType, "application/x-link-")
+func isLinkMimeType(mimeType, itemMimeType string) bool {
+	filter := _linkMimeTypeFilter[mimeType]
+	return strings.HasPrefix(mimeType, "application/x-link-") && (filter == itemMimeType || filter == "")
 }
 
 // parseExtensions parses a list of comma separated extensions
@@ -1680,7 +1693,7 @@ func (f *Fs) newObjectWithExportInfo(
 			fs.Debugf(remote, "No export formats found for %q", info.MimeType)
 			return nil, fs.ErrorObjectNotFound
 		}
-		if isLinkMimeType(exportMimeType) {
+		if isLinkMimeType(exportMimeType, info.MimeType) {
 			return f.newLinkObject(ctx, remote, info, extension, exportMimeType)
 		}
 		return f.newDocumentObject(ctx, remote, info, extension, exportMimeType)
@@ -1829,6 +1842,16 @@ func linkTemplate(mt string) *template.Template {
 				template.New("application/x-link-url").Parse(urlTemplate)),
 			"application/x-link-webloc": template.Must(
 				template.New("application/x-link-webloc").Parse(weblocTemplate)),
+			"application/x-link-gdoc": template.Must(
+				template.New("application/x-link-gdoc").Parse(urlTemplate)),
+			"application/x-link-gsheet": template.Must(
+				template.New("application/x-link-gsheet").Parse(urlTemplate)),
+			"application/x-link-gslides": template.Must(
+				template.New("application/x-link-gslides").Parse(urlTemplate)),
+			"application/x-link-gform": template.Must(
+				template.New("application/x-link-gform").Parse(urlTemplate)),
+			"application/x-link-gscript": template.Must(
+				template.New("application/x-link-gscript").Parse(urlTemplate)),
 		}
 	})
 	return _linkTemplates[mt]
@@ -1885,7 +1908,7 @@ func (f *Fs) findExportFormatByMimeType(ctx context.Context, itemMimeType string
 	if isDocument {
 		for _, _extension := range f.exportExtensions {
 			_mimeType := mime.TypeByExtension(_extension)
-			if isLinkMimeType(_mimeType) {
+			if isLinkMimeType(_mimeType, itemMimeType) {
 				return _extension, _mimeType, true
 			}
 			for _, emt := range exportMimeTypes {
@@ -1903,7 +1926,7 @@ func (f *Fs) findExportFormatByMimeType(ctx context.Context, itemMimeType string
 	// hasn't been found all docs should be exported
 	for _, _extension := range f.exportExtensions {
 		_mimeType := mime.TypeByExtension(_extension)
-		if isLinkMimeType(_mimeType) {
+		if isLinkMimeType(_mimeType, itemMimeType) {
 			return _extension, _mimeType, true
 		}
 	}
