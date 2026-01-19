@@ -10,7 +10,11 @@ package drive
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -4432,6 +4436,22 @@ func (o *linkObject) Open(ctx context.Context, options ...fs.OpenOption) (in io.
 	}
 
 	return io.NopCloser(bytes.NewReader(data)), nil
+}
+
+func (o *linkObject) Hash(ctx context.Context, t hash.Type) (string, error) {
+	if t == hash.MD5 {
+		md5Sum := md5.Sum(o.content)
+		return hex.EncodeToString(md5Sum[:]), nil
+	}
+	if t == hash.SHA1 {
+		sha1Sum := sha1.Sum(o.content)
+		return hex.EncodeToString(sha1Sum[:]), nil
+	}
+	if t == hash.SHA256 {
+		sha256Sum := sha256.Sum256(o.content)
+		return hex.EncodeToString(sha256Sum[:]), nil
+	}
+	return "", hash.ErrUnsupported
 }
 
 func (o *baseObject) update(ctx context.Context, updateInfo *drive.File, uploadMimeType string, in io.Reader,
